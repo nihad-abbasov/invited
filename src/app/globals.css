@@ -1,0 +1,338 @@
+@import "tailwindcss";
+
+/* ---------- Invited design tokens (Apple-inspired) ---------- */
+:root {
+  /* Surfaces */
+  --background: #f5f5f7; /* Apple system gray 6 */
+  --surface: #ffffff;
+  --surface-elevated: #ffffffcc; /* Glass */
+  --surface-translucent: rgba(255, 255, 255, 0.72);
+  --hairline: rgba(0, 0, 0, 0.08);
+
+  /* Text */
+  --foreground: #1d1d1f; /* Apple near-black */
+  --foreground-secondary: #6e6e73;
+  --foreground-tertiary: #86868b;
+
+  /* Accent (Apple system blue) */
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --accent-pressed: #006edb;
+
+  /* Status */
+  --green: #34c759;
+  --red: #ff3b30;
+  --yellow: #ffcc00;
+  --orange: #ff9500;
+  --pink: #ff2d55;
+  --purple: #af52de;
+
+  /* Radii (Apple-ish continuous corners) */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+
+  /* Easings (Apple-feel: fast-out, slow-in) */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snap: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Shadows */
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px -8px rgba(0, 0, 0, 0.12);
+  --shadow-pop: 0 24px 64px -16px rgba(0, 0, 0, 0.35);
+}
+
+/* Reusable "dark palette" block. We assign it in two places:
+   - via `prefers-color-scheme: dark` when the user is on "system" (no explicit attr, or attr === "system")
+   - via an explicit `data-theme="dark"` set by ThemeProvider                              */
+:root[data-theme="dark"] {
+  --background: #000000;
+  --surface: #1c1c1e;
+  --surface-elevated: rgba(28, 28, 30, 0.78);
+  --surface-translucent: rgba(28, 28, 30, 0.6);
+  --hairline: rgba(255, 255, 255, 0.1);
+
+  --foreground: #f5f5f7;
+  --foreground-secondary: #aeaeb2;
+  --foreground-tertiary: #8e8e93;
+
+  --accent: #0a84ff;
+  --accent-hover: #1f8dff;
+  --accent-pressed: #006edb;
+
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 40px -8px rgba(0, 0, 0, 0.55);
+  --shadow-pop: 0 24px 64px -16px rgba(0, 0, 0, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Apply dark tokens only when the user has not explicitly chosen "light".
+     `:not([data-theme="dark"])` keeps the rule from firing twice and helps
+     specificity behave predictably alongside the explicit selector above. */
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --background: #000000;
+    --surface: #1c1c1e;
+    --surface-elevated: rgba(28, 28, 30, 0.78);
+    --surface-translucent: rgba(28, 28, 30, 0.6);
+    --hairline: rgba(255, 255, 255, 0.1);
+
+    --foreground: #f5f5f7;
+    --foreground-secondary: #aeaeb2;
+    --foreground-tertiary: #8e8e93;
+
+    --accent: #0a84ff;
+    --accent-hover: #1f8dff;
+    --accent-pressed: #006edb;
+
+    --shadow-card:
+      0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 40px -8px rgba(0, 0, 0, 0.55);
+    --shadow-pop: 0 24px 64px -16px rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* Smooth tint swap when the user toggles light/dark. We deliberately don't
+   transition `background-image` (would also affect gradients/illustrations). */
+html {
+  transition:
+    background-color 240ms var(--ease-spring),
+    color 240ms var(--ease-spring);
+}
+body {
+  transition:
+    background-color 240ms var(--ease-spring),
+    color 240ms var(--ease-spring);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-hairline: var(--hairline);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-muted: var(--foreground-secondary);
+  --color-subtle: var(--foreground-tertiary);
+  /* Font stacks. next/font injects --ff-* variables (see layout.tsx); we
+     chain system fallbacks here so things degrade gracefully if Google
+     Fonts is unreachable. */
+  --font-sans:
+    var(--ff-sans), -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display:
+    var(--ff-display), ui-serif, Georgia, Cambria, "Times New Roman", Times,
+    serif;
+  --font-rounded:
+    var(--ff-rounded), ui-rounded, "SF Pro Rounded",
+    "Hiragino Maru Gothic ProN", "Comic Sans MS", sans-serif;
+  --font-script:
+    var(--ff-script), "Brush Script MT", "Bradley Hand", cursive;
+  --font-mono:
+    var(--ff-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  letter-spacing: -0.005em;
+}
+
+/* Tune Fraunces axes for a warmer, party-ready feel. Applied via the
+   .font-display utility (and the fontStyle() helper for invitation titles). */
+.font-display {
+  font-family: var(--font-display);
+  font-variation-settings:
+    "SOFT" 80,
+    "WONK" 0,
+    "opsz" 144;
+  letter-spacing: -0.018em;
+}
+
+.font-script {
+  font-family: var(--font-script);
+  letter-spacing: 0;
+}
+
+/* Beautiful, subtle scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  background-clip: padding-box;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"])
+    ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    background-clip: padding-box;
+  }
+}
+
+/* Glass surface helper */
+.glass {
+  background: var(--surface-translucent);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  border: 1px solid var(--hairline);
+}
+
+/* Hairline border */
+.hairline {
+  border: 1px solid var(--hairline);
+}
+
+/* SF-style focus ring */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+/* Apple-style button press */
+@keyframes press {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0.97);
+  }
+}
+
+.tap-spring {
+  transition: transform 200ms var(--ease-spring);
+}
+.tap-spring:active {
+  transform: scale(0.97);
+}
+
+/* Shimmer for skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -800px 0;
+  }
+  100% {
+    background-position: 800px 0;
+  }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 0%,
+    rgba(0, 0, 0, 0.08) 40%,
+    rgba(0, 0, 0, 0.04) 80%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+/* Aurora background (used on landing) */
+@keyframes aurora-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, -1%, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+.aurora::before,
+.aurora::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(
+      40% 40% at 20% 30%,
+      rgba(10, 132, 255, 0.45),
+      transparent 60%
+    ),
+    radial-gradient(
+      40% 40% at 80% 20%,
+      rgba(175, 82, 222, 0.35),
+      transparent 60%
+    ),
+    radial-gradient(
+      40% 40% at 60% 80%,
+      rgba(255, 45, 85, 0.3),
+      transparent 60%
+    ),
+    radial-gradient(
+      40% 40% at 30% 80%,
+      rgba(52, 199, 89, 0.25),
+      transparent 60%
+    );
+  filter: blur(40px);
+  animation: aurora-drift 18s ease-in-out infinite;
+  z-index: 0;
+}
+.aurora::after {
+  animation-delay: -9s;
+  opacity: 0.7;
+}
+
+/* Confetti-y dot field used on success screens */
+@keyframes float-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.float-up {
+  animation: float-up 600ms var(--ease-spring) both;
+}
+
+/* Hide scrollbars on horizontal pickers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Apple-style segmented control container */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  background: rgba(120, 120, 128, 0.16);
+  border-radius: 999px;
+}
+.segmented button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  transition:
+    background 200ms var(--ease-spring),
+    color 200ms var(--ease-spring);
+}
+.segmented button[data-active="true"] {
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
