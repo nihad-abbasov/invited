@@ -13,6 +13,8 @@ import {
   THEME_INIT_SCRIPT,
 } from "@/components/theme/ThemeProvider";
 import { TopBar } from "@/components/shell/TopBar";
+import { ToastProvider } from "@/components/ui/Toast";
+import { SITE_URL } from "@/lib/siteUrl";
 
 /**
  * Body / UI: friendly modern sans-serif. Keeps the Apple-flavored neatness
@@ -61,10 +63,27 @@ const fontVars = [jakarta, fraunces, quicksand, caveat, geistMono]
   .join(" ");
 
 export const metadata: Metadata = {
-  title: "Invited — Bring people together",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Invited — Bring people together",
+    template: "%s — Invited",
+  },
   description:
     "Create beautiful invitations, manage RSVPs, share a playlist and a photo album. No app required.",
   applicationName: "Invited",
+  openGraph: {
+    siteName: "Invited",
+    type: "website",
+    title: "Invited — Bring people together",
+    description:
+      "Create beautiful invitations, manage RSVPs, share a playlist and a photo album. No app required.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Invited — Bring people together",
+    description:
+      "Create beautiful invitations, manage RSVPs, share a playlist and a photo album. No app required.",
+  },
 };
 
 export const viewport: Viewport = {
@@ -93,11 +112,13 @@ export default function RootLayout({
             previously picked light/dark explicitly. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
+      <body className="min-h-full flex flex-col bg-[var(--background)] text-foreground">
         <ThemeProvider>
           <SessionProvider>
-            <TopBar />
-            <main className="flex-1 flex flex-col">{children}</main>
+            <ToastProvider>
+              <TopBar />
+              <main className="flex-1 flex flex-col">{children}</main>
+            </ToastProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { addPhoto, removePhoto } from "@/lib/api/events";
 import { fileToDataUrl } from "@/lib/api/photos";
 import type { SharedAlbumPhoto, User } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
 
 interface Props {
   eventId: string;
@@ -37,17 +39,12 @@ export function AlbumPanel({ eventId, photos, user, onChange }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <div className="text-sm text-[var(--foreground-secondary)]">
+        <div className="text-sm text-muted">
           {photos.length} {photos.length === 1 ? "photo" : "photos"} from the crew
         </div>
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={!user || busy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium hairline tap-spring disabled:opacity-40"
-        >
+        <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} disabled={!user || busy}>
           <Plus className="h-3.5 w-3.5" /> Add a photo
-        </button>
+        </Button>
         <input
           ref={fileRef}
           type="file"
@@ -58,18 +55,21 @@ export function AlbumPanel({ eventId, photos, user, onChange }: Props) {
       </div>
 
       {photos.length === 0 ? (
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={() => fileRef.current?.click()}
           disabled={!user || busy}
-          className="w-full aspect-[5/3] rounded-[var(--radius-md)] hairline grid place-items-center text-[var(--foreground-secondary)] tap-spring hover:bg-[var(--surface)] disabled:opacity-50"
+          className="w-full aspect-[5/3] h-auto flex-col gap-2"
         >
+          <ImagePlus className="h-7 w-7" />
           <div className="text-center">
-            <ImagePlus className="h-7 w-7 mx-auto mb-2" />
-            <div className="font-medium text-[var(--foreground)]">Start the shared album</div>
-            <div className="text-xs">Photos appear here for everyone in this event.</div>
+            <div className="font-medium text-foreground">Start the shared album</div>
+            <div className="text-xs font-normal text-muted">
+              Photos appear here for everyone in this event.
+            </div>
           </div>
-        </button>
+        </Button>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {photos.map((p) => (
@@ -78,7 +78,7 @@ export function AlbumPanel({ eventId, photos, user, onChange }: Props) {
               layout
               type="button"
               onClick={() => setPreview(p)}
-              className="relative aspect-square rounded-[var(--radius-sm)] overflow-hidden hairline tap-spring group"
+              className="relative aspect-square rounded-sm overflow-hidden hairline tap-spring group"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={p.src} alt="" className="w-full h-full object-cover" />
@@ -90,32 +90,28 @@ export function AlbumPanel({ eventId, photos, user, onChange }: Props) {
         </div>
       )}
 
-      <p className="mt-2 text-[11px] text-[var(--foreground-tertiary)]">
+      <p className="mt-2 text-[11px] text-subtle">
         Photos are stored locally for now. Cloud sync coming soon.
       </p>
 
-      {preview && (
-        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-black/70 backdrop-blur" onClick={() => setPreview(null)}>
-          <div className="relative max-h-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview.src} alt="" className="max-h-[80vh] max-w-full rounded-2xl shadow-[var(--shadow-pop)]" />
-            <div className="absolute top-2 right-2 flex gap-2">
-              <button
-                onClick={() => remove(preview.id)}
-                className="h-9 px-3 rounded-full bg-black/60 text-white text-xs"
-              >
-                Delete
-              </button>
-              <button
-                onClick={() => setPreview(null)}
-                className="h-9 w-9 rounded-full bg-black/60 text-white grid place-items-center"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      <Dialog open={!!preview} onOpenChange={(v) => !v && setPreview(null)}>
+        <DialogContent className="max-w-3xl border-0 bg-transparent p-0 shadow-none">
+          {preview && (
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={preview.src} alt="" className="max-h-[80vh] max-w-full rounded-2xl shadow-(--shadow-pop) mx-auto" />
+              <div className="absolute top-2 right-2 flex gap-2">
+                <Button size="sm" variant="secondary" onClick={() => remove(preview.id)} className="bg-black/60 text-white border-0">
+                  Delete
+                </Button>
+                <Button size="icon" variant="secondary" onClick={() => setPreview(null)} className="bg-black/60 text-white border-0">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

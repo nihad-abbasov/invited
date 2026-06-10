@@ -9,13 +9,21 @@ import { Avatar } from "@/components/session/Avatar";
 import { SignInDialog } from "@/components/session/SignInDialog";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useTheme, type ThemeChoice } from "@/components/theme/ThemeProvider";
+import { Button } from "@/components/ui/Button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/DropdownMenu";
 import { cn } from "@/lib/cn";
 
 export function TopBar() {
   const pathname = usePathname();
   const { user, ready, signOut } = useSession();
   const [signInOpen, setSignInOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const isPublicInvite = pathname?.startsWith("/i/");
 
@@ -44,66 +52,49 @@ export function TopBar() {
 
             <div className="flex items-center gap-2">
               {!isPublicInvite && (
-                <Link
-                  href="/create"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-sm font-medium tap-spring"
-                  style={{ background: "var(--accent)" }}
-                >
-                  <Plus className="h-4 w-4" />
-                  New event
-                </Link>
+                <Button asChild size="sm" className="hidden sm:inline-flex">
+                  <Link href="/create">
+                    <Plus className="h-4 w-4" />
+                    New event
+                  </Link>
+                </Button>
               )}
 
               <QuickThemeButton />
 
               {ready && (user ? (
-                <div className="relative">
-                  <button
-                    className="tap-spring focus-ring rounded-full"
-                    onClick={() => setMenuOpen((v) => !v)}
-                    aria-label="Account"
-                  >
-                    <Avatar user={user} size="sm" />
-                  </button>
-                  {menuOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-30"
-                        onClick={() => setMenuOpen(false)}
-                      />
-                      <div className="absolute right-0 mt-2 w-64 glass rounded-2xl p-1 shadow-[var(--shadow-card)] z-40">
-                        <div className="px-3 py-2 text-sm">
-                          <div className="font-medium truncate">{user.name}</div>
-                          <div className="text-xs text-[var(--foreground-secondary)]">No iCloud required</div>
-                        </div>
-                        <div className="my-1 h-px bg-[var(--hairline)]" />
-                        <div className="px-3 py-2">
-                          <div className="text-[10px] uppercase tracking-wider text-[var(--foreground-secondary)] font-medium mb-1.5">
-                            Appearance
-                          </div>
-                          <ThemeToggle className="!flex w-full [&_button]:flex-1 [&_button]:justify-center" />
-                        </div>
-                        <div className="my-1 h-px bg-[var(--hairline)]" />
-                        <MenuItem onClick={() => { setSignInOpen(true); setMenuOpen(false); }}>
-                          Change name
-                        </MenuItem>
-                        <Link href="/events" className="block">
-                          <MenuItem onClick={() => setMenuOpen(false)}>My events</MenuItem>
-                        </Link>
-                        <MenuItem onClick={() => { signOut(); setMenuOpen(false); }} danger>
-                          Sign out
-                        </MenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="tap-spring focus-ring rounded-full" aria-label="Account">
+                      <Avatar user={user} size="sm" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel>
+                      <div className="font-medium truncate">{user.name}</div>
+                      <div className="text-xs text-muted font-normal">No iCloud required</div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <div className="px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wider text-muted font-medium mb-1.5">
+                        Appearance
                       </div>
-                    </>
-                  )}
-                </div>
+                      <ThemeToggle className="!flex w-full [&_button]:flex-1 [&_button]:justify-center" />
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setSignInOpen(true)}>Change name</DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/events">My events</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={signOut} className="text-[var(--red)] focus:text-[var(--red)]">
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
-                <button
-                  onClick={() => setSignInOpen(true)}
-                  className="px-3 py-1.5 rounded-full text-sm font-medium hairline tap-spring"
-                >
+                <Button variant="secondary" size="sm" onClick={() => setSignInOpen(true)}>
                   Sign in
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -122,8 +113,8 @@ function NavLink({ href, active, children }: { href: string; active: boolean; ch
       className={cn(
         "px-3 py-1.5 rounded-full text-sm transition-colors",
         active
-          ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
-          : "text-[var(--foreground-secondary)] hover:text-[var(--foreground)]",
+          ? "bg-surface text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+          : "text-muted hover:text-foreground",
       )}
     >
       {children}
@@ -131,10 +122,6 @@ function NavLink({ href, active, children }: { href: string; active: boolean; ch
   );
 }
 
-/**
- * Single-icon quick toggle. Cycles Light → Dark → System and reflects the
- * current state. Visible to everyone (signed-in or not) for one-tap access.
- */
 function QuickThemeButton() {
   const { choice, setChoice, resolved } = useTheme();
   const next: Record<ThemeChoice, ThemeChoice> = {
@@ -142,44 +129,22 @@ function QuickThemeButton() {
     dark: "system",
     system: "light",
   };
-  // What icon to show: explicit Sun/Moon when forced, Monitor for "system".
   const Icon = choice === "system" ? Monitor : resolved === "dark" ? Moon : Sun;
   const label =
     choice === "system" ? "System theme — click for Light" :
     choice === "light"  ? "Light theme — click for Dark"  :
                           "Dark theme — click for System";
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="icon"
       onClick={() => setChoice(next[choice])}
-      className="h-8 w-8 rounded-full grid place-items-center hairline tap-spring text-[var(--foreground)] hover:bg-[var(--hairline)] transition-colors"
       title={label}
       aria-label={label}
+      className="h-8 w-8"
     >
       <Icon className="h-4 w-4" />
-    </button>
-  );
-}
-
-function MenuItem({
-  children,
-  onClick,
-  danger,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "block w-full text-left px-3 py-2 rounded-xl text-sm hover:bg-[var(--hairline)] transition-colors",
-        danger && "text-[var(--red)]",
-      )}
-    >
-      {children}
-    </button>
+    </Button>
   );
 }

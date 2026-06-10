@@ -1,49 +1,51 @@
-"use client";
+import type { Metadata } from "next";
+import { PublicInvite } from "./PublicInvite";
 
-import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { getEventByCode } from "@/lib/api/events";
-import { EventView } from "@/components/event/EventView";
+/**
+ * Rich link preview metadata for shared invitations.
+ *
+ * ──────────────────────────────────────────────────────────────────────────────
+ *  NOTE: per-event previews need a server-readable backend.
+ * ──────────────────────────────────────────────────────────────────────────────
+ *  In mock mode events live in the browser's localStorage, so the server (and
+ *  social scrapers like iMessage / WhatsApp / Slack) cannot read the event
+ *  title or date here. We therefore ship a polished, branded generic preview.
+ *
+ *  Once `getEventByCode` talks to a real backend, fetch the event in
+ *  `generateMetadata` and in `opengraph-image.tsx` to make the preview
+ *  event-specific (title, date, host) — the wiring is already in place.
+ * ──────────────────────────────────────────────────────────────────────────────
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}): Promise<Metadata> {
+  const { code } = await params;
+  const title = "You're invited";
+  const description = "Tap to see the details, RSVP, and bring the good vibes.";
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${title} — Invited`,
+      description,
+      type: "website",
+      url: `/i/${code}`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} — Invited`,
+      description,
+    },
+  };
+}
 
-export default function PublicInvitePage({
+export default async function PublicInvitePage({
   params,
 }: {
   params: Promise<{ code: string }>;
 }) {
-  const { code } = use(params);
-  const router = useRouter();
-  const [eventId, setEventId] = useState<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    getEventByCode(code).then((e) => setEventId(e?.id ?? null));
-  }, [code]);
-
-  if (eventId === undefined) {
-    return (
-      <div className="grid place-items-center py-40">
-        <Loader2 className="h-6 w-6 animate-spin text-[var(--foreground-secondary)]" />
-      </div>
-    );
-  }
-
-  if (eventId === null) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Invitation not found</h1>
-        <p className="mt-2 text-[var(--foreground-secondary)]">
-          That link may have expired, or the event was deleted.
-        </p>
-        <button
-          onClick={() => router.push("/")}
-          className="mt-5 px-4 py-2 rounded-full text-white tap-spring"
-          style={{ background: "var(--accent)" }}
-        >
-          Back to home
-        </button>
-      </div>
-    );
-  }
-
-  return <EventView eventId={eventId} hideHostControls />;
+  const { code } = await params;
+  return <PublicInvite code={code} />;
 }

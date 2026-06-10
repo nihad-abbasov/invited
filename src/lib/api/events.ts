@@ -131,6 +131,29 @@ export async function deleteEvent(id: string): Promise<void> {
   return delay(undefined);
 }
 
+/**
+ * Replace the event's co-host list. Maps to PUT /api/events/:id/cohosts.
+ * Only the primary host should be able to call this (enforced server-side
+ * in prod; the UI gates it here).
+ */
+export async function setCoHosts(
+  id: string,
+  coHosts: { id: string; name: string }[],
+): Promise<InvitedEvent | null> {
+  const all = readAll();
+  const idx = all.findIndex((e) => e.id === id);
+  if (idx === -1) return delay(null);
+  all[idx] = { ...all[idx], coHosts };
+  writeAll(all);
+  return delay(all[idx]);
+}
+
+/** True if the user is the host or a co-host (can edit / manage the event). */
+export function isOrganizer(event: InvitedEvent, userId: string | undefined): boolean {
+  if (!userId) return false;
+  return event.hostId === userId || !!event.coHosts?.some((c) => c.id === userId);
+}
+
 export async function setRsvp(
   eventId: string,
   user: User,

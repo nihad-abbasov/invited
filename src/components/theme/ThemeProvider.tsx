@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useHydrated } from "@/lib/useHydrated";
 
 export type ThemeChoice = "light" | "dark" | "system";
 /** What's actually being rendered right now (system gets resolved). */
@@ -39,8 +40,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // when the user has previously picked something other than "system".
   const [choice, setChoiceState] = useState<ThemeChoice>("system");
   const [resolved, setResolved] = useState<ResolvedTheme>("light");
+  const [initialized, setInitialized] = useState(false);
 
-  useEffect(() => {
+  // Read the stored preference once, on the first post-hydration render.
+  // Adjusting state during render (guarded) avoids a setState-in-effect.
+  const hydrated = useHydrated();
+  if (hydrated && !initialized) {
+    setInitialized(true);
     let initial: ThemeChoice = "system";
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -48,10 +54,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* ignore */
     }
-    setChoiceState(initial);
-    applyAttribute(initial);
+    if (initial !== "system") setChoiceState(initial);
     setResolved(initial === "system" ? readSystem() : initial);
-  }, []);
+  }
+
+  // Keep the <html data-theme> attribute in sync. DOM mutation belongs in an
+  // effect; there's no setState here, so it doesn't trigger cascading renders.
+  useEffect(() => {
+    applyAttribute(choice);
+  }, [choice]);
 
   useEffect(() => {
     if (choice !== "system") return;
@@ -63,7 +74,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setChoice = useCallback((next: ThemeChoice) => {
     setChoiceState(next);
-    applyAttribute(next);
     setResolved(next === "system" ? readSystem() : next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);

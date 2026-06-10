@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import type { User } from "@/lib/types";
+import { useHydrated } from "@/lib/useHydrated";
 import {
   currentUser as readCurrentUser,
   ensureUser,
@@ -26,10 +27,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    setUser(readCurrentUser());
+  // Hydrate session from storage once, on the first post-hydration render.
+  // Adjusting state during render (guarded) avoids a setState-in-effect.
+  const hydrated = useHydrated();
+  if (hydrated && !ready) {
     setReady(true);
-  }, []);
+    setUser(readCurrentUser());
+  }
 
   const signIn = useCallback((name: string) => {
     const u = apiSignIn(name);

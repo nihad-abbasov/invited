@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Cloud, CloudRain, CloudSnow, CloudSun, Moon, Sun, Wind } from "lucide-react";
 import { forecastFor } from "@/lib/api/weather";
 import type { WeatherForecast } from "@/lib/types";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const ICONS = {
   sun: Sun,
@@ -34,13 +37,13 @@ export function WeatherBadge({ startAt, locationName }: Props) {
   }, [startAt, locationName]);
 
   if (!f) {
-    return <div className="h-16 rounded-[var(--radius-md)] shimmer" />;
+    return <Skeleton className="h-16" />;
   }
 
   const Icon = ICONS[f.icon];
 
   return (
-    <div className="rounded-[var(--radius-md)] bg-[var(--surface)] hairline px-4 py-3 flex items-center gap-3">
+    <Card className="px-4 py-3 flex items-center gap-3 shadow-none">
       <div
         className="h-10 w-10 rounded-xl grid place-items-center text-white"
         style={{ background: "linear-gradient(155deg, #5ec8ff, #0a84ff)" }}
@@ -49,13 +52,11 @@ export function WeatherBadge({ startAt, locationName }: Props) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium">{f.condition}</div>
-        <div className="text-xs text-[var(--foreground-secondary)]">
+        <div className="text-xs text-muted">
           High {f.high}° · Low {f.low}°
         </div>
       </div>
-      <div className="text-[10px] uppercase tracking-wider text-[var(--foreground-tertiary)]">
-        Forecast
-      </div>
-    </div>
+      <Badge variant="default">Forecast</Badge>
+    </Card>
   );
 }

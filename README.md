@@ -145,19 +145,35 @@ your auth provider and keep the `User` shape stable.
 ## Scripts
 
 ```bash
-npm run dev    # next dev (Turbopack)
-npm run build  # production build
-npm run start  # serve the production build
-npm run lint   # eslint
+npm run dev        # next dev (Turbopack)
+npm run build      # production build
+npm run start      # serve the production build
+npm run lint       # eslint
+npm run test       # run the vitest suite once
+npm run test:watch # vitest in watch mode
 ```
 
 ## Roadmap / nice-to-haves
 
-- Edit an existing event (the API supports `updateEvent`, the UI page
-  is not yet built).
+Recently shipped:
+
+- ✅ Edit an existing event + delete, with **co-hosts** (promote a guest to
+  co-host so they can edit and share). See `src/app/events/[id]/edit`.
+- ✅ **Plus-ones & RSVP notes** in the reply UI (`RsvpBar`).
+- ✅ **Toast notifications** (`src/components/ui/Toast.tsx`) wired into copy
+  link / RSVP / save actions.
+- ✅ **OpenGraph / Twitter cards** with branded, bundled-font `next/og`
+  images for the home page and shared invites (`opengraph-image.tsx`).
+  > Note: per-event preview text needs a server-readable backend — in mock
+  > mode events live in `localStorage`, so the card is intentionally generic.
+  > The wiring (`generateMetadata`, segment `opengraph-image`) is ready to
+  > read the event once a real backend lands.
+- ✅ A **vitest** unit suite covering the `lib/` logic.
+
+Still open:
+
 - Native share sheet integration on iOS (we already call
   `navigator.share` where available).
-- Server-side rendering of the public invite page so OpenGraph cards
-  in iMessage / WhatsApp look beautiful.
 - Real-time updates when guests RSVP (server-sent events / websockets).
 - Calendar export (`.ics`) for guests who RSVP _going_.
+- Swap the mock `localStorage` backend in `src/lib/api/*` for a real server.

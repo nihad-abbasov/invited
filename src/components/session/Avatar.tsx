@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/cn";
 import type { User } from "@/lib/types";
+import { Avatar as AvatarRoot, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
 
 interface AvatarProps {
   user: Pick<User, "name" | "avatar" | "color">;
@@ -18,22 +19,36 @@ const SIZE = {
   xl: "h-20 w-20 text-2xl",
 };
 
-export function Avatar({ user, size = "md", className, ring }: AvatarProps) {
-  const initials =
-    user.avatar ||
-    (user.name?.split(/\s+/).filter(Boolean).map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "?");
+function initialsFrom(user: Pick<User, "name" | "avatar">): string {
+  if (user.avatar && user.avatar.length <= 3) return user.avatar;
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white select-none",
-        ring && "ring-2 ring-[var(--surface)]",
-        SIZE[size],
-        className,
-      )}
-      style={{ backgroundColor: user.color || "#0a84ff" }}
+    user.name
+      ?.split(/\s+/)
+      .filter(Boolean)
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
+}
+
+/** True when `avatar` looks like a URL or data URI, not initials. */
+function isImageSrc(avatar: string | undefined): avatar is string {
+  if (!avatar) return false;
+  return avatar.startsWith("http") || avatar.startsWith("data:") || avatar.startsWith("/");
+}
+
+export function Avatar({ user, size = "md", className, ring }: AvatarProps) {
+  const initials = initialsFrom(user);
+  const src = isImageSrc(user.avatar) ? user.avatar : undefined;
+
+  return (
+    <AvatarRoot
+      className={cn(SIZE[size], ring && "ring-2 ring-surface", className)}
       title={user.name}
     >
-      {initials}
-    </span>
+      {src && <AvatarImage src={src} alt={user.name} />}
+      <AvatarFallback style={{ backgroundColor: user.color || "#0a84ff" }}>{initials}</AvatarFallback>
+    </AvatarRoot>
   );
 }

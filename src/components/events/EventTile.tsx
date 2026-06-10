@@ -6,6 +6,7 @@ import { CalendarDays, MapPin, Users } from "lucide-react";
 import { InvitationCard } from "@/components/invitation/InvitationCard";
 import type { InvitedEvent } from "@/lib/types";
 import { formatShortDate } from "@/lib/format";
+import { Badge } from "@/components/ui/Badge";
 
 interface Props {
   event: InvitedEvent;
@@ -16,6 +17,9 @@ export function EventTile({ event, currentUserId }: Props) {
   const isHost = event.hostId === currentUserId;
   const going = event.guests.filter((g) => g.status === "going").length;
   const me = currentUserId ? event.guests.find((g) => g.user.id === currentUserId) : undefined;
+
+  const statusLabel = isHost ? "Hosting" : me?.status === "going" ? "Going" : me?.status ?? "Invited";
+
   return (
     <motion.div
       layout
@@ -35,12 +39,10 @@ export function EventTile({ event, currentUserId }: Props) {
             location={event.location}
           />
           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-            <span className="px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-white/85 text-black backdrop-blur">
-              {isHost ? "Hosting" : me?.status === "going" ? "Going" : me?.status ?? "Invited"}
-            </span>
+            <Badge variant="glass">{statusLabel}</Badge>
           </div>
         </div>
-        <div className="mt-2 px-1 flex items-center justify-between text-xs text-[var(--foreground-secondary)]">
+        <div className="mt-2 px-1 flex items-center justify-between text-xs text-muted">
           <span className="inline-flex items-center gap-1">
             <CalendarDays className="h-3.5 w-3.5" />
             {formatShortDate(event.startAt)}

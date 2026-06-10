@@ -9,7 +9,11 @@
  */
 const LOCALE = "en-US";
 
-export function formatEventDate(iso: string): { weekday: string; date: string; time: string } {
+export function formatEventDate(iso: string): {
+  weekday: string;
+  date: string;
+  time: string;
+} {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) {
     return { weekday: "—", date: "Pick a date", time: "" };
@@ -20,7 +24,11 @@ export function formatEventDate(iso: string): { weekday: string; date: string; t
     day: "numeric",
     year: "numeric",
   });
-  const time = d.toLocaleTimeString(LOCALE, { hour: "numeric", minute: "2-digit" });
+  const time = d.toLocaleTimeString(LOCALE, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
   return { weekday, date, time };
 }
 
@@ -33,14 +41,20 @@ export function formatShortDate(iso: string): string {
 export function formatRelative(iso: string): string {
   const ms = +new Date(iso) - Date.now();
   const abs = Math.abs(ms);
-  const min = 60_000, hr = 60 * min, day = 24 * hr;
+  const min = 60_000,
+    hr = 60 * min,
+    day = 24 * hr;
   const future = ms > 0;
-  const fmt = (n: number, u: string) => `${future ? "in " : ""}${n} ${u}${n === 1 ? "" : "s"}${future ? "" : " ago"}`;
+  const fmt = (n: number, u: string) =>
+    `${future ? "in " : ""}${n} ${u}${n === 1 ? "" : "s"}${future ? "" : " ago"}`;
   if (abs < min) return future ? "in a moment" : "just now";
   if (abs < hr) return fmt(Math.round(abs / min), "min");
   if (abs < day) return fmt(Math.round(abs / hr), "hour");
   if (abs < 7 * day) return fmt(Math.round(abs / day), "day");
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function formatDuration(ms: number): string {

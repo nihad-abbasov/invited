@@ -6,6 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { addTrack, removeTrack } from "@/lib/api/events";
 import { formatDuration } from "@/lib/format";
 import type { PlaylistTrack, User } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 
 interface Props {
   eventId: string;
@@ -16,16 +19,6 @@ interface Props {
 
 const EMOJI_FALLBACKS = ["🎶", "🎧", "🎷", "🎸", "🪩", "🥁", "🎼", "🎺"];
 
-/**
- * Mocked playlist editor.
- *
- * REPLACE-WITH-APPLE-MUSIC NOTE:
- *  Apple Music's MusicKit JS supports building collaborative playlists, but
- *  it requires an Apple Music subscription on both ends. When you wire that in:
- *    - Use MusicKit's search to pick real tracks (artwork, ids, durations).
- *    - Save the persistent playlist id (and ISRC/track ids) on the event.
- *    - Restrict edit privileges to attendees marked "going".
- */
 export function PlaylistPanel({ eventId, tracks, user, onChange }: Props) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
@@ -57,19 +50,13 @@ export function PlaylistPanel({ eventId, tracks, user, onChange }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <div className="text-sm text-[var(--foreground-secondary)]">
-          {tracks.length} {tracks.length === 1 ? "track" : "tracks"} ·{" "}
-          {formatDuration(totalMs)}
+        <div className="text-sm text-muted">
+          {tracks.length} {tracks.length === 1 ? "track" : "tracks"} · {formatDuration(totalMs)}
         </div>
         {!adding && (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            disabled={!user}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium hairline tap-spring"
-          >
+          <Button variant="secondary" size="sm" onClick={() => setAdding(true)} disabled={!user}>
             <Plus className="h-3.5 w-3.5" /> Add a track
-          </button>
+          </Button>
         )}
       </div>
 
@@ -82,82 +69,73 @@ export function PlaylistPanel({ eventId, tracks, user, onChange }: Props) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden mb-3"
           >
-            <div className="rounded-[var(--radius-md)] bg-[var(--surface)] hairline p-3 space-y-2">
-              <input
+            <Card className="p-3 space-y-2 shadow-none">
+              <Input
                 autoFocus
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Song title"
-                className="w-full bg-transparent text-sm focus:outline-none"
+                className="py-2 text-sm border-0 bg-transparent px-0 focus-ring:outline-none"
               />
-              <div className="h-px bg-[var(--hairline)]" />
-              <input
+              <div className="h-px bg-hairline" />
+              <Input
                 value={artist}
                 onChange={(e) => setArtist(e.target.value)}
                 placeholder="Artist"
-                className="w-full bg-transparent text-sm focus:outline-none"
+                className="py-2 text-sm border-0 bg-transparent px-0"
               />
               <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setAdding(false)}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium hairline tap-spring"
-                >
+                <Button type="button" variant="secondary" size="sm" onClick={() => setAdding(false)}>
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!title.trim() || !artist.trim()}
-                  className="px-3 py-1.5 rounded-full text-xs font-semibold text-white disabled:opacity-40 tap-spring"
-                  style={{ background: "var(--accent)" }}
-                >
+                </Button>
+                <Button type="submit" size="sm" disabled={!title.trim() || !artist.trim()}>
                   Add
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           </motion.form>
         )}
       </AnimatePresence>
 
-      <ul className="bg-[var(--surface)] rounded-[var(--radius-md)] hairline divide-y divide-[var(--hairline)]">
-        {tracks.length === 0 && (
-          <li className="px-4 py-8 text-center text-sm text-[var(--foreground-secondary)]">
-            <Music2 className="h-6 w-6 mx-auto mb-2 opacity-60" />
-            Nothing in the queue yet. Add the first song.
-          </li>
-        )}
-        {tracks.map((t) => (
-          <motion.li
-            key={t.id}
-            layout
-            className="px-3 py-2.5 flex items-center gap-3 group"
-          >
-            <div
-              className="h-10 w-10 rounded-lg grid place-items-center text-xl"
-              style={{ background: "linear-gradient(155deg, #af52de, #ff2d55)", color: "white" }}
-            >
-              {t.artwork || "🎶"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{t.title}</div>
-              <div className="text-xs text-[var(--foreground-secondary)] truncate">
-                {t.artist} · added by {t.addedBy}
+      <Card className="overflow-hidden shadow-none">
+        <ul className="divide-y divide-hairline">
+          {tracks.length === 0 && (
+            <li className="px-4 py-8 text-center text-sm text-muted">
+              <Music2 className="h-6 w-6 mx-auto mb-2 opacity-60" />
+              Nothing in the queue yet. Add the first song.
+            </li>
+          )}
+          {tracks.map((t) => (
+            <motion.li key={t.id} layout className="px-3 py-2.5 flex items-center gap-3 group">
+              <div
+                className="h-10 w-10 rounded-lg grid place-items-center text-xl"
+                style={{ background: "linear-gradient(155deg, #af52de, #ff2d55)", color: "white" }}
+              >
+                {t.artwork || "🎶"}
               </div>
-            </div>
-            <div className="text-xs tabular-nums text-[var(--foreground-tertiary)]">
-              {formatDuration(t.durationMs)}
-            </div>
-            <button
-              onClick={() => remove(t.id)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 rounded-full grid place-items-center hover:bg-[var(--hairline)]"
-              aria-label="Remove"
-            >
-              <X className="h-4 w-4 text-[var(--foreground-secondary)]" />
-            </button>
-          </motion.li>
-        ))}
-      </ul>
-      <p className="mt-2 text-[11px] text-[var(--foreground-tertiary)]">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{t.title}</div>
+                <div className="text-xs text-muted truncate">
+                  {t.artist} · added by {t.addedBy}
+                </div>
+              </div>
+              <div className="text-xs tabular-nums text-subtle">
+                {formatDuration(t.durationMs)}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => remove(t.id)}
+                className="opacity-0 group-hover:opacity-100 h-7 w-7"
+                aria-label="Remove"
+              >
+                <X className="h-4 w-4 text-muted" />
+              </Button>
+            </motion.li>
+          ))}
+        </ul>
+      </Card>
+      <p className="mt-2 text-[11px] text-subtle">
         Apple Music sync is coming. For now this lives just in your event.
       </p>
     </div>

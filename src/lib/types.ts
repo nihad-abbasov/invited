@@ -100,6 +100,11 @@ export interface InvitedEvent {
   /** Host's user id. */
   hostId: string;
   hostName: string;
+  /**
+   * Additional hosts who can edit the event and manage guests.
+   * Promoted from the guest list by the primary host.
+   */
+  coHosts?: Pick<User, "id" | "name">[];
   location?: EventLocation;
   background: EventBackground;
   font: EventFontPreset;

@@ -1,8 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Copy, MessageCircle, Mail, Check, Share2, QrCode } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Copy, MessageCircle, Mail, Check, Share2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { inviteUrl } from "@/lib/siteUrl";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/Dialog";
+import { useToast } from "@/components/ui/Toast";
 
 interface Props {
   open: boolean;
@@ -13,12 +25,11 @@ interface Props {
 
 export function ShareDialog({ open, onClose, title, shortCode }: Props) {
   const [copied, setCopied] = useState(false);
-  const [url, setUrl] = useState("");
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setUrl(`${window.location.origin}/i/${shortCode}`);
-  }, [shortCode]);
+  const [showQr, setShowQr] = useState(false);
+  const { toast } = useToast();
+  // Always point at the deployed site so links/QR codes work off-device,
+  // even when sharing from a local dev server.
+  const url = inviteUrl(shortCode);
 
   async function copy() {
     if (!url) return;
@@ -26,8 +37,9 @@ export function ShareDialog({ open, onClose, title, shortCode }: Props) {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+      toast({ title: "Link copied", description: "Paste it anywhere to invite guests.", variant: "success" });
     } catch {
-      /* no-op */
+      toast({ title: "Couldn't copy link", description: "Copy it manually instead.", variant: "error" });
     }
   }
 
@@ -44,80 +56,74 @@ export function ShareDialog({ open, onClose, title, shortCode }: Props) {
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <motion.div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Share invitation</DialogTitle>
+          <DialogDescription>Anyone with the link can RSVP — no account required.</DialogDescription>
+        </DialogHeader>
+
+        <Card className="mt-5 p-3 flex items-center gap-2 shadow-none">
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase tracking-wider text-subtle">Link</div>
+            <div className="font-mono text-sm truncate">{url}</div>
+          </div>
+          <Button size="sm" onClick={copy} className="shrink-0">
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </Card>
+
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <ShareTile icon={<Share2 className="h-4 w-4" />} label="Share…" onClick={nativeShare} />
+          <ShareTile
+            icon={<MessageCircle className="h-4 w-4" />}
+            label="iMessage"
+            href={`sms:&body=${encodeURIComponent(`You're invited: ${title} — ${url}`)}`}
           />
-          <motion.div
-            className="relative z-10 w-full max-w-md glass rounded-[var(--radius-xl)] p-5 shadow-[var(--shadow-pop)]"
-            initial={{ y: 32, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 32, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 280, damping: 28 }}
-          >
-            <div className="text-center">
-              <h2 className="text-xl font-semibold tracking-tight">Share invitation</h2>
-              <p className="text-sm text-[var(--foreground-secondary)] mt-1">
-                Anyone with the link can RSVP — no account required.
-              </p>
-            </div>
+          <ShareTile
+            icon={<Mail className="h-4 w-4" />}
+            label="Email"
+            href={`mailto:?subject=${encodeURIComponent(`You're invited: ${title}`)}&body=${encodeURIComponent(`${title}\n\n${url}`)}`}
+          />
+        </div>
 
-            <div className="mt-5 rounded-[var(--radius-md)] bg-[var(--surface)] hairline p-3 flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] uppercase tracking-wider text-[var(--foreground-tertiary)]">
-                  Link
-                </div>
-                <div className="font-mono text-sm truncate">{url}</div>
-              </div>
-              <button
-                onClick={copy}
-                className="px-3 py-2 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 tap-spring text-white"
-                style={{ background: "var(--accent)" }}
-              >
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
+        <button
+          type="button"
+          onClick={() => setShowQr((v) => !v)}
+          aria-expanded={showQr}
+          className="mt-3 w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-muted hover:text-foreground transition-colors py-1"
+        >
+          <QrCode className="h-4 w-4" />
+          {showQr ? "Hide QR code" : "Show QR code"}
+        </button>
 
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <ShareTile
-                icon={<Share2 className="h-4 w-4" />}
-                label="Share…"
-                onClick={nativeShare}
-              />
-              <ShareTile
-                icon={<MessageCircle className="h-4 w-4" />}
-                label="iMessage"
-                href={`sms:&body=${encodeURIComponent(`You're invited: ${title} — ${url}`)}`}
-              />
-              <ShareTile
-                icon={<Mail className="h-4 w-4" />}
-                label="Email"
-                href={`mailto:?subject=${encodeURIComponent(`You're invited: ${title}`)}&body=${encodeURIComponent(`${title}\n\n${url}`)}`}
-              />
-            </div>
-
-            <button
-              onClick={onClose}
-              className="mt-5 w-full py-3 rounded-full font-medium hairline tap-spring"
+        <AnimatePresence initial={false}>
+          {showQr && url && (
+            <motion.div
+              key="qr"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="overflow-hidden"
             >
-              Done
-            </button>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+              <div className="mt-2 flex flex-col items-center gap-2 pb-1">
+                {/* Always dark-on-white so it scans regardless of app theme. */}
+                <div className="rounded-2xl bg-white p-4 shadow-(--shadow-pop)">
+                  <QRCodeSVG value={url} size={172} level="M" marginSize={0} fgColor="#0b0b0c" bgColor="#ffffff" />
+                </div>
+                <div className="text-xs text-muted">Scan with a phone camera to open the invite.</div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <Button variant="secondary" className="mt-5 w-full" onClick={onClose}>
+          Done
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -133,12 +139,10 @@ function ShareTile({
   href?: string;
 }) {
   const inner = (
-    <div className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-[var(--radius-md)] bg-[var(--surface)] hairline tap-spring">
-      <div className="h-9 w-9 rounded-full bg-[var(--accent)] text-white grid place-items-center">
-        {icon}
-      </div>
+    <Card className="flex flex-col items-center gap-1.5 px-3 py-3 shadow-none tap-spring">
+      <div className="h-9 w-9 rounded-full bg-accent text-white grid place-items-center">{icon}</div>
       <div className="text-xs font-medium">{label}</div>
-    </div>
+    </Card>
   );
   if (href) {
     return (

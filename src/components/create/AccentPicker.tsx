@@ -2,6 +2,7 @@
 
 import { ACCENT_OPTIONS } from "@/lib/design";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/Button";
 
 interface Props {
   value: string;
@@ -14,12 +15,14 @@ export function AccentPicker({ value, onChange }: Props) {
       {ACCENT_OPTIONS.map((o) => {
         const active = o.color.toLowerCase() === value.toLowerCase();
         return (
-          <button
+          <Button
             key={o.color}
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => onChange(o.color)}
             className={cn(
-              "h-8 w-8 rounded-full tap-spring transition-transform",
+              "h-8 w-8 rounded-full p-0",
               active && "ring-2 ring-offset-2 ring-offset-[var(--background)]",
             )}
             style={{

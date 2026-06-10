@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* ---------- Invited design tokens (Apple-inspired) ---------- */
 :root {
@@ -18,6 +19,10 @@
   --accent: #0071e3;
   --accent-hover: #0077ed;
   --accent-pressed: #006edb;
+
+  /* Neutral fill used for hover/active states in menus, pickers, etc. */
+  --fill-subtle: rgba(120, 120, 128, 0.12);
+  --fill-subtle-strong: rgba(120, 120, 128, 0.2);
 
   /* Status */
   --green: #34c759;
@@ -61,6 +66,9 @@
   --accent-hover: #1f8dff;
   --accent-pressed: #006edb;
 
+  --fill-subtle: rgba(120, 120, 128, 0.24);
+  --fill-subtle-strong: rgba(120, 120, 128, 0.36);
+
   --shadow-card:
     0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 40px -8px rgba(0, 0, 0, 0.55);
   --shadow-pop: 0 24px 64px -16px rgba(0, 0, 0, 0.7);
@@ -84,6 +92,9 @@
     --accent: #0a84ff;
     --accent-hover: #1f8dff;
     --accent-pressed: #006edb;
+
+    --fill-subtle: rgba(120, 120, 128, 0.24);
+    --fill-subtle-strong: rgba(120, 120, 128, 0.36);
 
     --shadow-card:
       0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 40px -8px rgba(0, 0, 0, 0.55);
@@ -112,6 +123,8 @@ body {
   --color-hairline: var(--hairline);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-fill-subtle: var(--fill-subtle);
+  --color-fill-subtle-strong: var(--fill-subtle-strong);
   --color-muted: var(--foreground-secondary);
   --color-subtle: var(--foreground-tertiary);
   /* Font stacks. next/font injects --ff-* variables (see layout.tsx); we
@@ -248,13 +261,13 @@ body {
 /* Aurora background (used on landing) */
 @keyframes aurora-drift {
   0% {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
   50% {
-    transform: translate3d(2%, -1%, 0) scale(1.05);
+    transform: translate3d(2%, -1.5%, 0);
   }
   100% {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
 }
 .aurora::before,
@@ -286,10 +299,24 @@ body {
   filter: blur(40px);
   animation: aurora-drift 18s ease-in-out infinite;
   z-index: 0;
+  /* Promote to a dedicated GPU layer so the (expensive) blur is rasterized
+     once and the keyframe animation only translates a cached texture. Without
+     this the compositor re-blurs a viewport-sized layer every frame. */
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 .aurora::after {
   animation-delay: -9s;
   opacity: 0.7;
+}
+
+/* Honor reduced-motion: keep the gradients, drop the infinite animation. */
+@media (prefers-reduced-motion: reduce) {
+  .aurora::before,
+  .aurora::after {
+    animation: none;
+  }
 }
 
 /* Confetti-y dot field used on success screens */
@@ -332,7 +359,8 @@ body {
     background 200ms var(--ease-spring),
     color 200ms var(--ease-spring);
 }
-.segmented button[data-active="true"] {
+.segmented button[data-active="true"],
+.segmented [data-state="on"] {
   background: var(--surface);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }

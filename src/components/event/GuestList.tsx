@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { Check, HelpCircle, X, Clock } from "lucide-react";
 import { Avatar } from "@/components/session/Avatar";
 import type { Guest, RsvpStatus } from "@/lib/types";
+import { Card } from "@/components/ui/Card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { cn } from "@/lib/cn";
 
 const ICONS: Record<RsvpStatus, React.ComponentType<{ className?: string }>> = {
@@ -58,73 +60,53 @@ export function GuestList({ guests }: Props) {
         <StatChip label="Going" color="var(--green)" value={counts.going} />
         <StatChip label="Maybe" color="var(--orange)" value={counts.maybe} />
         <StatChip label="Declined" color="var(--red)" value={counts.declined} />
-        <StatChip
-          label="Pending"
-          color="var(--foreground-tertiary)"
-          value={counts.pending}
-          className="hidden sm:block"
-        />
+        <StatChip label="Pending" color="var(--foreground-tertiary)" value={counts.pending} className="hidden sm:block" />
       </div>
 
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 pb-2">
-        {FILTERS.map((f) => {
-          const active = filter === f.id;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
-                active
-                  ? "bg-[var(--accent)] text-white"
-                  : "hairline text-[var(--foreground-secondary)] hover:text-[var(--foreground)]",
-              )}
-            >
+      <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | RsvpStatus)}>
+        <TabsList className="w-full justify-start -mx-1 px-1">
+          {FILTERS.map((f) => (
+            <TabsTrigger key={f.id} value={f.id}>
               {f.label}
-            </button>
-          );
-        })}
-      </div>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-      <ul className="mt-2 divide-y divide-[var(--hairline)] bg-[var(--surface)] rounded-[var(--radius-md)] hairline overflow-hidden">
-        {filtered.length === 0 && (
-          <li className="px-4 py-6 text-center text-sm text-[var(--foreground-secondary)]">
-            No one here yet.
-          </li>
-        )}
-        {filtered.map((g) => {
-          const Icon = ICONS[g.status];
-          return (
-            <motion.li
-              key={g.id}
-              layout
-              className="px-4 py-3 flex items-center gap-3"
-            >
-              <Avatar user={g.user} size="sm" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">
-                  {g.user.name}
-                  {g.plusOnes > 0 && (
-                    <span className="ml-1 text-xs text-[var(--foreground-secondary)] font-normal">
-                      +{g.plusOnes}
-                    </span>
+      <Card className="mt-2 overflow-hidden shadow-none">
+        <ul className="divide-y divide-hairline">
+          {filtered.length === 0 && (
+            <li className="px-4 py-6 text-center text-sm text-muted">
+              No one here yet.
+            </li>
+          )}
+          {filtered.map((g) => {
+            const Icon = ICONS[g.status];
+            return (
+              <motion.li key={g.id} layout className="px-4 py-3 flex items-center gap-3">
+                <Avatar user={g.user} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">
+                    {g.user.name}
+                    {g.plusOnes > 0 && (
+                      <span className="ml-1 text-xs text-muted font-normal">
+                        +{g.plusOnes}
+                      </span>
+                    )}
+                  </div>
+                  {g.note && (
+                    <div className="text-xs text-muted truncate">{g.note}</div>
                   )}
                 </div>
-                {g.note && (
-                  <div className="text-xs text-[var(--foreground-secondary)] truncate">{g.note}</div>
-                )}
-              </div>
-              <div
-                className="inline-flex items-center gap-1 text-xs font-medium"
-                style={{ color: COLOR[g.status] }}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {LABEL[g.status]}
-              </div>
-            </motion.li>
-          );
-        })}
-      </ul>
+                <div className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: COLOR[g.status] }}>
+                  <Icon className="h-3.5 w-3.5" />
+                  {LABEL[g.status]}
+                </div>
+              </motion.li>
+            );
+          })}
+        </ul>
+      </Card>
     </div>
   );
 }
@@ -141,11 +123,11 @@ function StatChip({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-[var(--radius-md)] bg-[var(--surface)] hairline px-3 py-2", className)}>
-      <div className="text-[10px] uppercase tracking-wider text-[var(--foreground-secondary)]">{label}</div>
+    <Card className={cn("px-3 py-2 shadow-none", className)}>
+      <div className="text-[10px] uppercase tracking-wider text-muted">{label}</div>
       <div className="mt-0.5 text-lg font-semibold" style={{ color }}>
         {value}
       </div>
-    </div>
+    </Card>
   );
 }

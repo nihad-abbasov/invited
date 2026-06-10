@@ -7,6 +7,8 @@ import { fileToDataUrl } from "@/lib/api/photos";
 import type { EventBackground } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { Segmented } from "@/components/ui/Segmented";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 interface Props {
   value: EventBackground;
@@ -50,11 +52,9 @@ export function BackgroundPicker({ value, onChange }: Props) {
                   onClick={() => onChange({ kind: "emoji", emoji: b.emoji, gradient: b.gradient })}
                   className={cn(
                     "aspect-square rounded-2xl relative overflow-hidden tap-spring transition-shadow",
-                    active && "ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--background)]",
+                    active && "ring-2 ring-accent ring-offset-2 ring-offset-[var(--background)]",
                   )}
-                  style={{
-                    background: `linear-gradient(155deg, ${b.gradient[0]}, ${b.gradient[1]})`,
-                  }}
+                  style={{ background: `linear-gradient(155deg, ${b.gradient[0]}, ${b.gradient[1]})` }}
                   aria-label={b.label}
                 >
                   <span className="absolute inset-0 grid place-items-center text-4xl drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
@@ -77,11 +77,9 @@ export function BackgroundPicker({ value, onChange }: Props) {
                   onClick={() => onChange({ kind: "color", gradient: b.gradient })}
                   className={cn(
                     "aspect-square rounded-2xl tap-spring transition-shadow",
-                    active && "ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--background)]",
+                    active && "ring-2 ring-accent ring-offset-2 ring-offset-[var(--background)]",
                   )}
-                  style={{
-                    background: `linear-gradient(155deg, ${b.gradient[0]}, ${b.gradient[1]})`,
-                  }}
+                  style={{ background: `linear-gradient(155deg, ${b.gradient[0]}, ${b.gradient[1]})` }}
                   aria-label={b.label}
                 />
               );
@@ -92,30 +90,35 @@ export function BackgroundPicker({ value, onChange }: Props) {
         {tab === "photo" && (
           <div className="space-y-3">
             {value.kind === "photo" ? (
-              <div className="relative rounded-2xl overflow-hidden aspect-[4/3]">
+              <Card className="relative rounded-2xl overflow-hidden aspect-[4/3] p-0 shadow-none">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={value.src} alt="Selected" className="w-full h-full object-cover" />
-                <button
+                <Button
                   type="button"
+                  size="sm"
+                  variant="secondary"
                   onClick={() => onChange({ kind: "emoji", emoji: "🎉", gradient: ["#ff7ab8", "#7a5cff"] })}
-                  className="absolute top-2 right-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/60 text-white text-xs"
+                  className="absolute top-2 right-2 bg-black/60 text-white border-0"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Remove
-                </button>
-              </div>
+                </Button>
+              </Card>
             ) : (
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => fileRef.current?.click()}
-                className="w-full aspect-[4/3] rounded-2xl hairline grid place-items-center text-[var(--foreground-secondary)] tap-spring hover:bg-[var(--surface)]"
+                className="w-full aspect-[4/3] h-auto flex-col gap-2"
               >
+                <ImageIcon className="h-7 w-7" />
                 <div className="text-center">
-                  <ImageIcon className="h-7 w-7 mx-auto mb-2" />
-                  <div className="font-medium text-[var(--foreground)]">Upload a photo</div>
-                  <div className="text-xs">PNG, JPG up to ~5MB. Stays on this device.</div>
+                  <div className="font-medium text-foreground">Upload a photo</div>
+                  <div className="text-xs font-normal text-muted">
+                    PNG, JPG up to ~5MB. Stays on this device.
+                  </div>
                 </div>
-              </button>
+              </Button>
             )}
             <input
               ref={fileRef}
@@ -124,13 +127,9 @@ export function BackgroundPicker({ value, onChange }: Props) {
               className="hidden"
               onChange={(e) => pickFile(e.target.files?.[0] ?? undefined)}
             />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="text-sm font-medium text-[var(--accent)]"
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={() => fileRef.current?.click()} className="text-accent">
               {value.kind === "photo" ? "Replace photo" : "Choose from this device"}
-            </button>
+            </Button>
           </div>
         )}
       </div>
