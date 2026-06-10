@@ -12,30 +12,13 @@ import type {
   User,
 } from "../types";
 import { ensureUser } from "./session";
+import { isAuthEnabled, isRemoteEventsEnabled, resetBackendStatusCache } from "./status";
 
-let remoteEnabled: boolean | null = null;
-
-/** Cached check — true when Upstash env vars are set on the server. */
-export async function isRemoteEventsEnabled(): Promise<boolean> {
-  if (remoteEnabled !== null) return remoteEnabled;
-  try {
-    const res = await fetch("/api/events/status", { cache: "no-store" });
-    if (!res.ok) {
-      remoteEnabled = false;
-      return false;
-    }
-    const data = (await res.json()) as { enabled?: boolean };
-    remoteEnabled = !!data.enabled;
-    return remoteEnabled;
-  } catch {
-    remoteEnabled = false;
-    return false;
-  }
-}
+export { isRemoteEventsEnabled };
 
 /** Force a fresh status check (e.g. after env change in dev). */
 export function resetRemoteEventsCache(): void {
-  remoteEnabled = null;
+  resetBackendStatusCache();
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T | null> {
@@ -51,8 +34,12 @@ async function api<T>(path: string, init?: RequestInit): Promise<T | null> {
 }
 
 export async function listEvents(): Promise<InvitedEvent[] | null> {
-  const user = ensureUser();
-  return api<InvitedEvent[]>(`/api/events?userId=${encodeURIComponent(user.id)}`);
+  // In auth mode the server derives identity from the session; otherwise we
+  // pass the local device user id.
+  const query = (await isAuthEnabled())
+    ? ""
+    : `?userId=${encodeURIComponent(ensureUser().id)}`;
+  return api<InvitedEvent[]>(`/api/events${query}`);
 }
 
 export async function getEvent(id: string): Promise<InvitedEvent | null> {
@@ -71,7 +58,7 @@ export async function importEvent(evt: InvitedEvent): Promise<InvitedEvent | nul
 }
 
 export async function createEvent(input: CreateEventInput): Promise<InvitedEvent | null> {
-  const user = ensureUser();
+  const user = (await isAuthEnabled()) ? undefined : ensureUser();
   return api<InvitedEvent>("/api/events", {
     method: "POST",
     body: JSON.stringify({ input, user }),

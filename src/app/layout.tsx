@@ -1,4 +1,3 @@
-import type { Metadata, Viewport } from "next";
 import {
   Plus_Jakarta_Sans,
   Fraunces,
@@ -6,15 +5,17 @@ import {
   Caveat,
   Geist_Mono,
 } from "next/font/google";
-import "./globals.css";
-import { SessionProvider } from "@/components/session/SessionProvider";
 import {
   ThemeProvider,
   THEME_INIT_SCRIPT,
 } from "@/components/theme/ThemeProvider";
-import { TopBar } from "@/components/shell/TopBar";
+import { AuthSessionProvider } from "@/components/session/AuthSessionProvider";
+import { SessionProvider } from "@/components/session/SessionProvider";
 import { ToastProvider } from "@/components/ui/Toast";
+import { TopBar } from "@/components/shell/TopBar";
+import type { Metadata, Viewport } from "next";
 import { SITE_URL } from "@/lib/siteUrl";
+import "./globals.css";
 
 /**
  * Body / UI: friendly modern sans-serif. Keeps the Apple-flavored neatness
@@ -114,12 +115,14 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-[var(--background)] text-foreground">
         <ThemeProvider>
-          <SessionProvider>
-            <ToastProvider>
-              <TopBar />
-              <main className="flex-1 flex flex-col">{children}</main>
-            </ToastProvider>
-          </SessionProvider>
+          <AuthSessionProvider>
+            <SessionProvider>
+              <ToastProvider>
+                <TopBar />
+                <main className="flex-1 flex flex-col">{children}</main>
+              </ToastProvider>
+            </SessionProvider>
+          </AuthSessionProvider>
         </ThemeProvider>
       </body>
     </html>
