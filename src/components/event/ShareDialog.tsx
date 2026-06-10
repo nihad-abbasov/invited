@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, MessageCircle, Mail, Check, Share2, QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { isRemoteEventsEnabled } from "@/lib/api/events";
 import { buildInviteUrl } from "@/lib/inviteShare";
 import type { InvitedEvent } from "@/lib/types";
 import {
@@ -26,11 +27,16 @@ interface Props {
 export function ShareDialog({ open, onClose, event }: Props) {
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [remote, setRemote] = useState(false);
   const { toast } = useToast();
   const title = event.title;
-  // Self-contained link: points at the deployed site and carries the event
-  // details in the hash so it opens on any device without a backend.
-  const url = buildInviteUrl(event);
+
+  useEffect(() => {
+    if (open) isRemoteEventsEnabled().then(setRemote);
+  }, [open]);
+
+  // With Redis: short link. Without: self-contained hash payload.
+  const url = buildInviteUrl(event, { remote });
 
   async function copy() {
     if (!url) return;

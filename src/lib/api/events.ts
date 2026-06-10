@@ -1,172 +1,90 @@
 /**
- * Events API (mock).
- *
- * ──────────────────────────────────────────────────────────────────────────────
- *  REPLACE-WITH-REAL-BACKEND NOTE
- * ──────────────────────────────────────────────────────────────────────────────
- *  Every exported function here corresponds 1:1 to an endpoint you'd build
- *  on a real server. Keep the function signatures, swap the bodies.
- *
- *  Suggested mapping:
- *    listEvents()             -> GET    /api/events?role=host|guest
- *    getEventByCode(code)     -> GET    /api/events/by-code/:code   (public)
- *    getEvent(id)             -> GET    /api/events/:id
- *    createEvent(input)       -> POST   /api/events
- *    updateEvent(id, patch)   -> PATCH  /api/events/:id
- *    deleteEvent(id)          -> DELETE /api/events/:id
- *    setRsvp(...)             -> PUT    /api/events/:id/rsvp
- *    postMessage(...)         -> POST   /api/events/:id/messages
- *    addTrack/removeTrack     -> POST/DELETE /api/events/:id/playlist
- *    addPhoto/removePhoto     -> POST/DELETE /api/events/:id/album
- *
- *  Photos in mock mode are stored as data: URLs in localStorage. On a real
- *  backend you'd POST them to S3 (pre-signed URL) and store only the URL.
- * ──────────────────────────────────────────────────────────────────────────────
+ * Events API — uses Upstash Redis on the server when configured,
+ * otherwise falls back to browser localStorage.
  */
 
 import type {
   CreateEventInput,
   EventMessage,
-  Guest,
   InvitedEvent,
   PlaylistTrack,
   RsvpStatus,
   SharedAlbumPhoto,
   User,
 } from "../types";
-import { buildSeedEvents } from "../mock/seed";
-import { delay, readJSON, shortCode, uid, writeJSON } from "../mock/storage";
-import { ensureUser } from "./session";
+import * as local from "./eventsLocal";
+import * as remote from "./remoteEvents";
 
-const KEY = "invited.events.v1";
-const SEEDED_KEY = "invited.events.seeded.v1";
+export { isRemoteEventsEnabled, resetRemoteEventsCache } from "./remoteEvents";
 
-function readAll(): InvitedEvent[] {
-  return readJSON<InvitedEvent[]>(KEY, []);
+/** True if the user is the host or a co-host (can edit / manage the event). */
+export function isOrganizer(event: InvitedEvent, userId: string | undefined): boolean {
+  if (!userId) return false;
+  return event.hostId === userId || !!event.coHosts?.some((c) => c.id === userId);
 }
 
-function writeAll(events: InvitedEvent[]): void {
-  writeJSON(KEY, events);
-}
-
-function maybeSeed(): void {
-  if (typeof window === "undefined") return;
-  if (readJSON<boolean>(SEEDED_KEY, false)) return;
-  const user = ensureUser();
-  writeAll(buildSeedEvents(user));
-  writeJSON(SEEDED_KEY, true);
+async function preferRemote<T>(
+  remoteFn: () => Promise<T | null>,
+  localFn: () => Promise<T>,
+): Promise<T> {
+  if (await remote.isRemoteEventsEnabled()) {
+    const result = await remoteFn();
+    if (result !== null) return result;
+  }
+  return localFn();
 }
 
 export async function listEvents(): Promise<InvitedEvent[]> {
-  maybeSeed();
-  const user = ensureUser();
-  const all = readAll();
-  // Return events the user hosts or is a guest in. (Mock — server would scope.)
-  const filtered = all.filter(
-    (e) => e.hostId === user.id || e.guests.some((g) => g.user.id === user.id),
-  );
-  return delay(filtered.sort((a, b) => +new Date(a.startAt) - +new Date(b.startAt)));
+  return preferRemote(() => remote.listEvents(), () => local.listEvents());
 }
 
 export async function getEvent(id: string): Promise<InvitedEvent | null> {
-  maybeSeed();
-  return delay(readAll().find((e) => e.id === id) ?? null);
+  return preferRemote(() => remote.getEvent(id), () => local.getEvent(id));
 }
 
 export async function getEventByCode(code: string): Promise<InvitedEvent | null> {
-  maybeSeed();
-  const c = code.toUpperCase();
-  return delay(readAll().find((e) => e.shortCode === c) ?? null);
+  return preferRemote(() => remote.getEventByCode(code), () => local.getEventByCode(code));
 }
 
-/**
- * Persist an event decoded from a self-contained share link (see
- * `lib/inviteShare`). Used when opening an invite on a device that doesn't have
- * the event locally. Existing local data wins, so a guest's own RSVP isn't
- * clobbered by re-opening the link.
- */
 export async function importEvent(evt: InvitedEvent): Promise<InvitedEvent> {
-  const all = readAll();
-  const existing = all.find((e) => e.id === evt.id);
-  if (existing) return delay(existing, 0);
-  all.unshift(evt);
-  writeAll(all);
-  return delay(evt, 0);
+  if (await remote.isRemoteEventsEnabled()) {
+    const saved = await remote.importEvent(evt);
+    if (saved) return saved;
+  }
+  return local.importEvent(evt);
 }
 
 export async function createEvent(input: CreateEventInput): Promise<InvitedEvent> {
-  const user = ensureUser();
-  const evt: InvitedEvent = {
-    id: uid("evt_"),
-    shortCode: shortCode(),
-    title: input.title.trim(),
-    description: input.description?.trim(),
-    startAt: input.startAt,
-    endAt: input.endAt,
-    hostId: user.id,
-    hostName: user.name,
-    location: input.location,
-    background: input.background,
-    font: input.font,
-    accent: input.accent,
-    guests: [
-      {
-        id: uid("g_"),
-        user,
-        status: "going",
-        plusOnes: 0,
-        respondedAt: new Date().toISOString(),
-      },
-    ],
-    messages: [],
-    playlist: [],
-    album: [],
-    createdAt: new Date().toISOString(),
-  };
-  const all = readAll();
-  all.unshift(evt);
-  writeAll(all);
-  return delay(evt, 280);
+  if (await remote.isRemoteEventsEnabled()) {
+    const evt = await remote.createEvent(input);
+    if (evt) return evt;
+  }
+  return local.createEvent(input);
 }
 
 export async function updateEvent(
   id: string,
   patch: Partial<CreateEventInput>,
 ): Promise<InvitedEvent | null> {
-  const all = readAll();
-  const idx = all.findIndex((e) => e.id === id);
-  if (idx === -1) return delay(null);
-  all[idx] = { ...all[idx], ...patch };
-  writeAll(all);
-  return delay(all[idx]);
+  return preferRemote(() => remote.updateEvent(id, patch), () => local.updateEvent(id, patch));
 }
 
 export async function deleteEvent(id: string): Promise<void> {
-  writeAll(readAll().filter((e) => e.id !== id));
-  return delay(undefined);
+  if (await remote.isRemoteEventsEnabled()) {
+    const ok = await remote.deleteEvent(id);
+    if (ok) return;
+  }
+  return local.deleteEvent(id);
 }
 
-/**
- * Replace the event's co-host list. Maps to PUT /api/events/:id/cohosts.
- * Only the primary host should be able to call this (enforced server-side
- * in prod; the UI gates it here).
- */
 export async function setCoHosts(
   id: string,
   coHosts: { id: string; name: string }[],
 ): Promise<InvitedEvent | null> {
-  const all = readAll();
-  const idx = all.findIndex((e) => e.id === id);
-  if (idx === -1) return delay(null);
-  all[idx] = { ...all[idx], coHosts };
-  writeAll(all);
-  return delay(all[idx]);
-}
-
-/** True if the user is the host or a co-host (can edit / manage the event). */
-export function isOrganizer(event: InvitedEvent, userId: string | undefined): boolean {
-  if (!userId) return false;
-  return event.hostId === userId || !!event.coHosts?.some((c) => c.id === userId);
+  return preferRemote(
+    () => remote.setCoHosts(id, coHosts),
+    () => local.setCoHosts(id, coHosts),
+  );
 }
 
 export async function setRsvp(
@@ -175,31 +93,10 @@ export async function setRsvp(
   status: RsvpStatus,
   opts?: { plusOnes?: number; note?: string },
 ): Promise<InvitedEvent | null> {
-  const all = readAll();
-  const idx = all.findIndex((e) => e.id === eventId);
-  if (idx === -1) return delay(null);
-  const evt = all[idx];
-  const existing = evt.guests.find((g) => g.user.id === user.id);
-  if (existing) {
-    existing.status = status;
-    existing.respondedAt = new Date().toISOString();
-    if (opts?.plusOnes !== undefined) existing.plusOnes = opts.plusOnes;
-    if (opts?.note !== undefined) existing.note = opts.note;
-    // Keep latest name/avatar/color in sync if the user changed their profile.
-    existing.user = user;
-  } else {
-    const g: Guest = {
-      id: uid("g_"),
-      user,
-      status,
-      plusOnes: opts?.plusOnes ?? 0,
-      note: opts?.note,
-      respondedAt: new Date().toISOString(),
-    };
-    evt.guests.push(g);
-  }
-  writeAll(all);
-  return delay(evt);
+  return preferRemote(
+    () => remote.setRsvp(eventId, user, status, opts),
+    () => local.setRsvp(eventId, user, status, opts),
+  );
 }
 
 export async function postMessage(
@@ -207,65 +104,44 @@ export async function postMessage(
   body: string,
   author: User,
 ): Promise<EventMessage | null> {
-  const all = readAll();
-  const evt = all.find((e) => e.id === eventId);
-  if (!evt) return delay(null);
-  const msg: EventMessage = {
-    id: uid("m_"),
-    authorId: author.id,
-    authorName: author.name,
-    body: body.trim(),
-    createdAt: new Date().toISOString(),
-  };
-  evt.messages.unshift(msg);
-  writeAll(all);
-  return delay(msg);
+  return preferRemote(
+    () => remote.postMessage(eventId, body, author),
+    () => local.postMessage(eventId, body, author),
+  );
 }
 
 export async function addTrack(
   eventId: string,
   track: Omit<PlaylistTrack, "id">,
 ): Promise<PlaylistTrack | null> {
-  const all = readAll();
-  const evt = all.find((e) => e.id === eventId);
-  if (!evt) return delay(null);
-  const t: PlaylistTrack = { id: uid("t_"), ...track };
-  evt.playlist.push(t);
-  writeAll(all);
-  return delay(t);
+  return preferRemote(
+    () => remote.addTrack(eventId, track),
+    () => local.addTrack(eventId, track),
+  );
 }
 
 export async function removeTrack(eventId: string, trackId: string): Promise<void> {
-  const all = readAll();
-  const evt = all.find((e) => e.id === eventId);
-  if (!evt) return delay(undefined);
-  evt.playlist = evt.playlist.filter((t) => t.id !== trackId);
-  writeAll(all);
-  return delay(undefined);
+  if (await remote.isRemoteEventsEnabled()) {
+    const ok = await remote.removeTrack(eventId, trackId);
+    if (ok) return;
+  }
+  return local.removeTrack(eventId, trackId);
 }
 
 export async function addPhoto(
   eventId: string,
   photo: Omit<SharedAlbumPhoto, "id" | "createdAt">,
 ): Promise<SharedAlbumPhoto | null> {
-  const all = readAll();
-  const evt = all.find((e) => e.id === eventId);
-  if (!evt) return delay(null);
-  const p: SharedAlbumPhoto = {
-    id: uid("p_"),
-    createdAt: new Date().toISOString(),
-    ...photo,
-  };
-  evt.album.unshift(p);
-  writeAll(all);
-  return delay(p);
+  return preferRemote(
+    () => remote.addPhoto(eventId, photo),
+    () => local.addPhoto(eventId, photo),
+  );
 }
 
 export async function removePhoto(eventId: string, photoId: string): Promise<void> {
-  const all = readAll();
-  const evt = all.find((e) => e.id === eventId);
-  if (!evt) return delay(undefined);
-  evt.album = evt.album.filter((p) => p.id !== photoId);
-  writeAll(all);
-  return delay(undefined);
+  if (await remote.isRemoteEventsEnabled()) {
+    const ok = await remote.removePhoto(eventId, photoId);
+    if (ok) return;
+  }
+  return local.removePhoto(eventId, photoId);
 }

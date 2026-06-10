@@ -24,6 +24,12 @@ const baseEvent: InvitedEvent = {
 };
 
 describe("inviteShare", () => {
+  it("uses a short link when remote storage is enabled", () => {
+    const url = buildInviteUrl(baseEvent, { remote: true });
+    expect(url).toBe("https://invited-az.vercel.app/i/AB12CD");
+    expect(url).not.toContain("#");
+  });
+
   it("round-trips the event display fields through the URL hash", () => {
     const url = buildInviteUrl(baseEvent);
     expect(url).toContain("/i/AB12CD#i=");

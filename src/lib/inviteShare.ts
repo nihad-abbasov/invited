@@ -108,14 +108,18 @@ function unpack(p: Packed): InvitedEvent {
   };
 }
 
-/** Absolute, self-contained invite URL (short code in path, data in hash). */
-export function buildInviteUrl(evt: InvitedEvent): string {
+/**
+ * Absolute invite URL.
+ * - With Redis: short link only (`/i/CODE`) — the server has the event.
+ * - Without Redis: self-contained link with event data in the hash.
+ */
+export function buildInviteUrl(evt: InvitedEvent, opts?: { remote?: boolean }): string {
+  const base = `${SITE_URL}/i/${evt.shortCode}`;
+  if (opts?.remote) return base;
   try {
-    return `${SITE_URL}/i/${evt.shortCode}#${HASH_PREFIX}${encodeBase64Url(
-      JSON.stringify(pack(evt)),
-    )}`;
+    return `${base}#${HASH_PREFIX}${encodeBase64Url(JSON.stringify(pack(evt)))}`;
   } catch {
-    return `${SITE_URL}/i/${evt.shortCode}`;
+    return base;
   }
 }
 
