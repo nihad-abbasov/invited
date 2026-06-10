@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { getEventByCode } from "@/lib/api/events";
+import { getEventByCode, importEvent } from "@/lib/api/events";
+import { decodeInviteHash } from "@/lib/inviteShare";
 import { EventView } from "@/components/event/EventView";
 import { Button } from "@/components/ui/Button";
 
@@ -12,7 +13,26 @@ export function PublicInvite({ code }: { code: string }) {
   const [eventId, setEventId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
-    getEventByCode(code).then((e) => setEventId(e?.id ?? null));
+    let active = true;
+    async function load() {
+      const local = await getEventByCode(code);
+      if (local) {
+        if (active) setEventId(local.id);
+        return;
+      }
+      // Not on this device — try to rebuild it from the self-contained link.
+      const shared = decodeInviteHash(window.location.hash);
+      if (shared && shared.shortCode.toUpperCase() === code.toUpperCase()) {
+        const imported = await importEvent(shared);
+        if (active) setEventId(imported.id);
+        return;
+      }
+      if (active) setEventId(null);
+    }
+    load();
+    return () => {
+      active = false;
+    };
   }, [code]);
 
   if (eventId === undefined) {

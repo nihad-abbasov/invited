@@ -79,6 +79,21 @@ export async function getEventByCode(code: string): Promise<InvitedEvent | null>
   return delay(readAll().find((e) => e.shortCode === c) ?? null);
 }
 
+/**
+ * Persist an event decoded from a self-contained share link (see
+ * `lib/inviteShare`). Used when opening an invite on a device that doesn't have
+ * the event locally. Existing local data wins, so a guest's own RSVP isn't
+ * clobbered by re-opening the link.
+ */
+export async function importEvent(evt: InvitedEvent): Promise<InvitedEvent> {
+  const all = readAll();
+  const existing = all.find((e) => e.id === evt.id);
+  if (existing) return delay(existing, 0);
+  all.unshift(evt);
+  writeAll(all);
+  return delay(evt, 0);
+}
+
 export async function createEvent(input: CreateEventInput): Promise<InvitedEvent> {
   const user = ensureUser();
   const evt: InvitedEvent = {

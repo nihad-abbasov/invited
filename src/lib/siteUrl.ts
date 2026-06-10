@@ -9,8 +9,3 @@
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://invited-az.vercel.app"
 ).replace(/\/$/, "");
-
-/** Absolute, shareable URL for a public invite by its short code. */
-export function inviteUrl(shortCode: string): string {
-  return `${SITE_URL}/i/${shortCode}`;
-}

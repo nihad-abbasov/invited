@@ -6,7 +6,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { inviteUrl } from "@/lib/siteUrl";
+import { buildInviteUrl } from "@/lib/inviteShare";
+import type { InvitedEvent } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -19,17 +20,17 @@ import { useToast } from "@/components/ui/Toast";
 interface Props {
   open: boolean;
   onClose: () => void;
-  title: string;
-  shortCode: string;
+  event: InvitedEvent;
 }
 
-export function ShareDialog({ open, onClose, title, shortCode }: Props) {
+export function ShareDialog({ open, onClose, event }: Props) {
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const { toast } = useToast();
-  // Always point at the deployed site so links/QR codes work off-device,
-  // even when sharing from a local dev server.
-  const url = inviteUrl(shortCode);
+  const title = event.title;
+  // Self-contained link: points at the deployed site and carries the event
+  // details in the hash so it opens on any device without a backend.
+  const url = buildInviteUrl(event);
 
   async function copy() {
     if (!url) return;
@@ -111,7 +112,7 @@ export function ShareDialog({ open, onClose, title, shortCode }: Props) {
               <div className="mt-2 flex flex-col items-center gap-2 pb-1">
                 {/* Always dark-on-white so it scans regardless of app theme. */}
                 <div className="rounded-2xl bg-white p-4 shadow-(--shadow-pop)">
-                  <QRCodeSVG value={url} size={172} level="M" marginSize={0} fgColor="#0b0b0c" bgColor="#ffffff" />
+                  <QRCodeSVG value={url} size={200} level="M" marginSize={0} fgColor="#0b0b0c" bgColor="#ffffff" />
                 </div>
                 <div className="text-xs text-muted">Scan with a phone camera to open the invite.</div>
               </div>

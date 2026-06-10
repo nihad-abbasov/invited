@@ -125,8 +125,7 @@ export function EventView({ eventId, hideHostControls, celebrate }: Props) {
       <ShareDialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        title={evt.title}
-        shortCode={evt.shortCode}
+        event={evt}
       />
 
       <div className="mx-auto max-w-6xl w-full px-4 sm:px-6 py-6 sm:py-10 grid lg:grid-cols-[minmax(0,1fr)_360px] gap-8">
